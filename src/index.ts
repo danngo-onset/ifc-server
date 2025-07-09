@@ -13,13 +13,20 @@ import * as OBC from "@thatopen/components";
 import * as StorageUtilities from "./storage-utilities";
 
 const app = express();
-const port = process.env.PORT || 8000;
+const PORT = process.env.PORT || 8000;
+const NODE_ENV = process.env.NODE_ENV || "development";
+
+const allowedOrigins = NODE_ENV === "production" ? [
+  "https://ifc-viewer2.vercel.app"
+] : [
+  "http://localhost:3000"
+];
 
 StorageUtilities.initStorage();
 
 app
   .use(cors({
-    origin: "http://localhost:3000",
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
@@ -193,6 +200,6 @@ async function exportFragments() {
   };
 }
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
