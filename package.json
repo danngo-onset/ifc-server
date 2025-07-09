@@ -13,12 +13,17 @@
   "type": "commonjs",
   "description": "",
   "dependencies": {
+    "@thatopen/components": "^2.4.11",
+    "cors": "^2.8.5",
     "express": "^5.1.0",
-    "@thatopen/components": "^2.4.11"
+    "web-ifc": "^0.0.68"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
     "@types/express": "^5.0.3",
+    "@types/multer": "^2.0.0",
     "@types/node": "^24.0.12",
+    "multer": "^2.0.1",
     "nodemon": "^3.1.7",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
