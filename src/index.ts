@@ -74,6 +74,10 @@ async function setupIfcLoader() {
 
 setupIfcLoader();
 
+app.get("/", (req: Request, res: Response) => {
+  res.status(200).send("Hello World");
+});
+
 app.get("/fragments", async (req: Request, res: Response) => {
   try {
     const storedFragments = await StorageUtilities.listStoredFragments();
