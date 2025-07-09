@@ -178,6 +178,9 @@ async function exportFragments() {
     fragmentsCount: group.items ? Object.keys(group.items).length : 0
   });
 
+  // Clear previous fragments before loading new ones
+  fragmentsManager.groups.clear();
+
   return {
     groupInfo: "Fragment group exported successfully",
     dataSize: data.byteLength,
