@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 
 // storage directory for fragments
-const STORAGE_DIR = path.join(__dirname, "../storage");
+const STORAGE_DIR = path.join(process.cwd(), "storage");
 const FRAGMENTS_DIR = path.join(STORAGE_DIR, "fragments");
 
 async function initStorage() {
@@ -17,7 +17,7 @@ async function initStorage() {
 async function saveFragmentToFile(
   filename: string, 
   data: Uint8Array, 
-  metadata: any
+  metadata: Record<string, any>
 ) {
   try {
     const fragmentPath = path.join(FRAGMENTS_DIR, `${filename}.frag`);
@@ -56,11 +56,11 @@ async function listStoredFragments() {
   try {
     const files = await fs.readdir(FRAGMENTS_DIR);
     const fragments = files
-      .filter(file => file.endsWith(".json"))
-      .map(file => file.replace(".json", ""));
+      .filter((file: string) => file.endsWith(".json"))
+      .map((file: string) => file.replace(".json", ""));
     
     const fragmentsWithMetadata = await Promise.all(
-      fragments.map(async (filename) => {
+      fragments.map(async (filename: string) => {
         try {
           const metadataPath = path.join(FRAGMENTS_DIR, `${filename}.json`);
           const metadata = JSON.parse(await fs.readFile(metadataPath, "utf-8"));
