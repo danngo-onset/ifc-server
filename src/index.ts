@@ -113,7 +113,7 @@ app.post("/fragments", upload.single("file"), async (req: Request, res: Response
       
     const fragments = await exportFragments();
 
-    const uuid = StorageUtilities.generateUUID();
+    const uuid = StorageUtilities.generateGUID();
 
     if (fragments && fragments.data) {
       // Convert base64 back to Uint8Array for storage
