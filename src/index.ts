@@ -28,7 +28,7 @@ app
     origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type"]
   }))
   .use(express.json());
 
@@ -44,9 +44,6 @@ const upload = multer({
 const components = new OBC.Components();
 
 const fragmentsManager = components.get(OBC.FragmentsManager);
-fragmentsManager.onFragmentsLoaded.add((model) => {
-  console.log(model);
-});
 
 const ifcLoader = components.get(OBC.IfcLoader);
 
@@ -55,14 +52,14 @@ async function setupIfcLoader() {
     ifcLoader.settings.webIfc.COORDINATE_TO_ORIGIN = true;
     
     // Optionally exclude some categories
-    const excludedCats = [
+    /* const excludedCats = [
       WEBIFC.IFCTENDONANCHOR,
       WEBIFC.IFCREINFORCINGBAR,
       WEBIFC.IFCREINFORCINGELEMENT,
     ];
     for (const cat of excludedCats) {
       ifcLoader.settings.excludedCategories.add(cat);
-    }
+    } */
     
     await ifcLoader.setup();
 
@@ -84,23 +81,12 @@ app.get("/", (req: Request, res: Response) => {
   res.status(200).send("Hello World");
 });
 
-app.get("/fragments", async (req: Request, res: Response) => {
+app.get("/fragments/:id", async (req: Request, res: Response) => {
   try {
-    const storedFragments = await StorageUtilities.listStoredFragments();
-    const groupsCount = fragmentsManager.groups.size;
-    const groups = Array.from(fragmentsManager.groups.values());
-    
-    const loadedGroupsInfo = groups.map(group => ({
-      fragmentsCount: group.items ? Object.keys(group.items).length : 0,
-      boundingBox: group.boundingBox
-    }));
+    const fragments = await StorageUtilities.loadFragmentFromFile(req.params.id);
     
     res.status(200).json({
-      currentlyLoaded: {
-        groupsCount,
-        groups: loadedGroupsInfo
-      },
-      storedFragments
+      fragments: Buffer.from(fragments).toString("base64")
     });
   } catch (error) {
     console.error("Error getting fragments:", error);
@@ -114,14 +100,9 @@ app.post("/fragments", upload.single("file"), async (req: Request, res: Response
 	if (!file) return res.status(400).send("No file provided");
 
 	try {
-    console.log(`Received file: ${file.originalname}, size: ${file.size} bytes`);
-    
-    // Load the IFC file using IfcLoader
     const buffer = new Uint8Array(file.buffer);
-    console.log(`Loading IFC file with buffer length: ${buffer.length}`);
     
     try {
-      // Load IFC and get the FragmentsGroup model
       await ifcLoader.load(buffer);
       console.log(`✅ IFC loaded successfully. Fragment groups: ${fragmentsManager.groups.size}`);
     } catch (obcError) {
@@ -131,36 +112,21 @@ app.post("/fragments", upload.single("file"), async (req: Request, res: Response
       
     const fragments = await exportFragments();
 
-    // Save fragments to disk with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const baseFilename = file.originalname.replace(/\.[^/.]+$/, ""); // Remove extension
-    const storedFilename = `${baseFilename}_${timestamp}`;
-    
-    const metadata = {
-      originalFilename: file.originalname,
-      uploadedAt: new Date().toISOString(),
-      fileSize: file.size,
-      ...fragments
-    };
+    const uuid = StorageUtilities.generateUUID();
 
     if (fragments && fragments.data) {
       // Convert base64 back to Uint8Array for storage
       const fragmentsBuffer = Buffer.from(fragments.data, "base64");
 
       await StorageUtilities.saveFragmentToFile(
-        storedFilename, 
+        uuid, 
         new Uint8Array(fragmentsBuffer), 
-        metadata
       );
 
       return res.status(200).json({ 
-        success: true,
-        message: "IFC processed to fragments successfully",
         filename: file.originalname,
-        storedAs: storedFilename,
-        size: file.size,
+        id: uuid,
         fragmentsCount: fragments.fragmentsCount,
-        dataSize: fragments.dataSize,
         fragments: fragments.data // Base64 encoded fragments
       });
     }
@@ -173,27 +139,18 @@ app.post("/fragments", upload.single("file"), async (req: Request, res: Response
 });
 
 async function exportFragments() {
-  if (!fragmentsManager.groups.size) {
-    console.log("No fragment groups found");
-    return null;
-  }
-
-  console.log(`Found ${fragmentsManager.groups.size} fragment group(s)`);
+  if (!fragmentsManager.groups.size) return null;
   
   const group = Array.from(fragmentsManager.groups.values())[0];
   const data = fragmentsManager.export(group);
 
-  console.log(`Exported fragments data:`, {
-    dataSize: data.byteLength,
-    fragmentsCount: group.items ? Object.keys(group.items).length : 0
-  });
+  const properties = group.getLocalProperties();
+  console.log("properties", properties);
 
   // Clear previous fragments before loading new ones
   fragmentsManager.groups.clear();
 
   return {
-    groupInfo: "Fragment group exported successfully",
-    dataSize: data.byteLength,
     fragmentsCount: group.items ? Object.keys(group.items).length : 0,
     data: Buffer.from(data).toString("base64")
   };
