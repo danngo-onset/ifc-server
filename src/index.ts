@@ -83,10 +83,11 @@ app.get("/", (req: Request, res: Response) => {
 
 app.get("/fragments/:id", async (req: Request, res: Response) => {
   try {
-    const fragments = await StorageUtilities.loadFragmentFromFile(req.params.id);
+    const result = await StorageUtilities.loadFragmentFromFile(req.params.id);
     
     res.status(200).json({
-      fragments: Buffer.from(fragments).toString("base64")
+      fragments: Buffer.from(result.fragments).toString("base64"),
+      properties: result.properties
     });
   } catch (error) {
     console.error("Error getting fragments:", error);
@@ -120,14 +121,16 @@ app.post("/fragments", upload.single("file"), async (req: Request, res: Response
 
       await StorageUtilities.saveFragmentToFile(
         uuid, 
-        new Uint8Array(fragmentsBuffer), 
+        new Uint8Array(fragmentsBuffer),
+        fragments.properties || undefined
       );
 
       return res.status(200).json({ 
         filename: file.originalname,
         id: uuid,
         fragmentsCount: fragments.fragmentsCount,
-        fragments: fragments.data // Base64 encoded fragments
+        fragments: fragments.data, // Base64 encoded fragments
+        properties: fragments.properties // Properties data as JSON string
       });
     }
 
@@ -144,15 +147,16 @@ async function exportFragments() {
   const group = Array.from(fragmentsManager.groups.values())[0];
   const data = fragmentsManager.export(group);
 
+  // Export properties data
   const properties = group.getLocalProperties();
-  console.log("properties", properties);
 
   // Clear previous fragments before loading new ones
   fragmentsManager.groups.clear();
 
   return {
-    fragmentsCount: group.items ? Object.keys(group.items).length : 0,
-    data: Buffer.from(data).toString("base64")
+    fragmentsCount : group.items ? Object.keys(group.items).length : 0,
+    data           : Buffer.from(data).toString("base64"),
+    properties     : properties ? JSON.stringify(properties) : null
   };
 }
 

@@ -35,13 +35,26 @@ async function initStorage() {
 }
 
 async function saveFragmentToFile(
-  filename : string, 
-  data     : Uint8Array, 
+  filename    : string, 
+  data        : Uint8Array,
+  properties? : string
 ) {
   try {
     const fragmentPath = path.join(FRAGMENTS_DIR, `${filename}.frag`);
+    const metadataPath = path.join(FRAGMENTS_DIR, `${filename}.meta.json`);
     
+    // Save fragment data
     await fs.writeFile(fragmentPath, data);
+    
+    // Save properties metadata if provided
+    if (properties) {
+      const metadata = {
+        properties: properties,
+        timestamp: new Date().toISOString()
+      };
+
+      await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+    }
     
     return fragmentPath;
   } catch (error) {
@@ -52,10 +65,24 @@ async function saveFragmentToFile(
 async function loadFragmentFromFile(filename: string) {
   try {
     const fragmentPath = path.join(FRAGMENTS_DIR, `${filename}.frag`);
+    const metadataPath = path.join(FRAGMENTS_DIR, `${filename}.meta.json`);
     
     const data = await fs.readFile(fragmentPath);
     
-    return new Uint8Array(data);
+    let properties = null;
+    try {
+      const metadataContent = await fs.readFile(metadataPath, "utf-8");
+      const metadata = JSON.parse(metadataContent);
+
+      properties = metadata.properties;
+    } catch (metaError) {
+      console.log("No metadata file found for fragment:", filename);
+    }
+    
+    return {
+      fragments  : new Uint8Array(data),
+      properties : properties
+    };
   } catch (error) {
     console.error("Error loading fragment:", error);
     throw error;
