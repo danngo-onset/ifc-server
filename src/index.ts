@@ -147,6 +147,8 @@ async function exportFragments() {
   const group = Array.from(fragmentsManager.groups.values())[0];
   const data = fragmentsManager.export(group);
 
+  const a = fragmentsManager.list.values();
+
   // Export properties data
   const properties = group.getLocalProperties();
 
