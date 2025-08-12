@@ -6,8 +6,7 @@ import cors from "cors";
 
 import multer from "multer";
 
-import * as WEBIFC from "web-ifc";
-import * as OBC from "@thatopen/components";
+import * as FRAGS from "@thatopen/fragments";
 
 import * as StorageUtilities from "./storage-utilities";
 
@@ -41,41 +40,10 @@ const upload = multer({
   }
 });
 
-const components = new OBC.Components();
+const ifcImporter = new FRAGS.IfcImporter();
+const wasmPath = path.join(process.cwd(), "node_modules/web-ifc/");
+ifcImporter.wasm = { absolute: true, path: wasmPath.endsWith("/") ? wasmPath : wasmPath + "/" };
 
-const fragmentsManager = components.get(OBC.FragmentsManager);
-
-const ifcLoader = components.get(OBC.IfcLoader);
-
-async function setupIfcLoader() {
-  try {
-    ifcLoader.settings.webIfc.COORDINATE_TO_ORIGIN = true;
-    
-    // Optionally exclude some categories
-    /* const excludedCats = [
-      WEBIFC.IFCTENDONANCHOR,
-      WEBIFC.IFCREINFORCINGBAR,
-      WEBIFC.IFCREINFORCINGELEMENT,
-    ];
-    for (const cat of excludedCats) {
-      ifcLoader.settings.excludedCategories.add(cat);
-    } */
-    
-    await ifcLoader.setup();
-
-    // Set WASM path
-    const wasmPath = path.join(process.cwd(), "node_modules/web-ifc/");
-    ifcLoader.settings.wasm = {
-      path: wasmPath.endsWith("/") ? wasmPath : wasmPath + "/",
-      absolute: true,
-    };
-  } catch (error) {
-    console.error("Error setting up IFC loader:", error);
-    throw error;
-  }
-}
-
-setupIfcLoader();
 
 app.get("/", (req: Request, res: Response) => {
   res.status(200).send("Hello World");
@@ -87,7 +55,7 @@ app.get("/fragments/:id", async (req: Request, res: Response) => {
     
     res.status(200).json({
       fragments: Buffer.from(result.fragments).toString("base64"),
-      properties: result.properties
+      properties: undefined
     });
   } catch (error) {
     console.error("Error getting fragments:", error);
@@ -101,64 +69,35 @@ app.post("/fragments", upload.single("file"), async (req: Request, res: Response
 	if (!file) return res.status(400).send("No file provided");
 
 	try {
-    const buffer = new Uint8Array(file.buffer);
-    
-    try {
-      await ifcLoader.load(buffer);
-      console.log(`✅ IFC loaded successfully. Fragment groups: ${fragmentsManager.groups.size}`);
-    } catch (obcError) {
-      console.log("OBC.IfcLoader failed:", (obcError as Error).message);
-      throw obcError;
-    }
-      
-    const fragments = await exportFragments();
+    const fragmentBytes = await ifcImporter.process({
+      bytes: new Uint8Array(file.buffer)
+    });
+
+    console.log(`✅ Fragments generated: ${fragmentBytes.byteLength} bytes`);
 
     const uuid = StorageUtilities.generateGUID();
 
-    if (fragments && fragments.data) {
-      // Convert base64 back to Uint8Array for storage
-      const fragmentsBuffer = Buffer.from(fragments.data, "base64");
-
+    if (fragmentBytes) {
       await StorageUtilities.saveFragmentToFile(
         uuid, 
-        new Uint8Array(fragmentsBuffer),
-        fragments.properties || undefined
+        fragmentBytes,
+        undefined
       );
 
       return res.status(200).json({ 
         filename: file.originalname,
         id: uuid,
-        fragmentsCount: fragments.fragmentsCount,
-        fragments: fragments.data, // Base64 encoded fragments
-        properties: fragments.properties // Properties data as JSON string
+        fragments: Buffer.from(fragmentBytes).toString("base64"), // Base64 encoded fragments
+        properties: undefined // Properties data as JSON string
       });
     }
 
-     return res.status(400).send("No fragments generated from IFC file");
+    return res.status(400).send("No fragments generated from IFC file");
 	} catch(error) {
     console.error("Error processing IFC file:", error);
     return res.status(500).send("Error processing IFC file");
 	}
 });
-
-async function exportFragments() {
-  if (!fragmentsManager.groups.size) return null;
-  
-  const group = Array.from(fragmentsManager.groups.values())[0];
-  const data = fragmentsManager.export(group);
-
-  // Export properties data
-  const properties = group.getLocalProperties();
-
-  // Clear previous fragments before loading new ones
-  fragmentsManager.groups.clear();
-
-  return {
-    fragmentsCount : group.items ? Object.keys(group.items).length : 0,
-    data           : Buffer.from(data).toString("base64"),
-    properties     : properties ? JSON.stringify(properties) : null
-  };
-}
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
