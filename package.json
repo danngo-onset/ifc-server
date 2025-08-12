@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "npx nodemon"
+    "dev": "nodemon --config nodemon.json --exec \"node --inspect=9229 -r ts-node/register\" src/index.ts"
   },
   "keywords": [],
   "author": "",
@@ -13,7 +13,6 @@
   "type": "commonjs",
   "description": "",
   "dependencies": {
-    "@thatopen/components": "^3.1.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.3",
     "@types/multer": "^2.0.0",
@@ -23,9 +22,10 @@
     "multer": "^2.0.1",
     "three": "^0.178.0",
     "typescript": "^5.8.3",
-    "web-ifc": "^0.0.69"
+    "web-ifc": "^0.0.70"
   },
   "devDependencies": {
+    "@thatopen/fragments": "^3.1.6",
     "nodemon": "^3.1.7",
     "ts-node": "^10.9.2"
   }
