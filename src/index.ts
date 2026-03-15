@@ -51,11 +51,10 @@ app.get("/", (req: Request, res: Response) => {
 
 app.get("/fragments/:id", async (req: Request, res: Response) => {
   try {
-    const result = await StorageUtilities.loadFragmentFromFile(req.params.id);
+    const fragments = await StorageUtilities.loadFragmentFromFile(req.params.id);
     
     res.status(200).json({
-      fragments: Buffer.from(result.fragments).toString("base64"),
-      properties: undefined
+      fragments: Buffer.from(fragments).toString("base64")
     });
   } catch (error) {
     console.error("Error getting fragments:", error);
@@ -80,15 +79,13 @@ app.post("/fragments", upload.single("file"), async (req: Request, res: Response
     if (fragmentBytes) {
       await StorageUtilities.saveFragmentToFile(
         uuid, 
-        fragmentBytes,
-        undefined
+        fragmentBytes
       );
 
       return res.status(200).json({ 
         filename: file.originalname,
         id: uuid,
-        fragments: Buffer.from(fragmentBytes).toString("base64"), // Base64 encoded fragments
-        properties: undefined // Properties data as JSON string
+        fragments: Buffer.from(fragmentBytes).toString("base64") // Base64 encoded fragments
       });
     }
 
