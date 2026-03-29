@@ -32,8 +32,18 @@ async function initStorage() {
   }
 }
 
+function isValidFragmentId(id: string): boolean {
+  // Only allow lowercase hex characters and hyphens, matching generateGUID output.
+  // This also prevents path separators and traversal sequences from being used.
+  return /^[0-9a-f-]+$/.test(id);
+}
+
 async function saveFragmentToFile(filename: string, data: Uint8Array) {
   try {
+    if (!isValidFragmentId(filename)) {
+      throw new Error("Invalid fragment identifier");
+    }
+
     const fragmentPath = path.join(FRAGMENTS_DIR, `${filename}.frag`);
 
     // Save fragment data
@@ -47,6 +57,10 @@ async function saveFragmentToFile(filename: string, data: Uint8Array) {
 
 async function loadFragmentFromFile(filename: string) {
   try {
+    if (!isValidFragmentId(filename)) {
+      throw new Error("Invalid fragment identifier");
+    }
+
     const fragmentPath = path.join(FRAGMENTS_DIR, `${filename}.frag`);
     
     const data = await fs.readFile(fragmentPath);
