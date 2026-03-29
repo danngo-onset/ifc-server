@@ -13,7 +13,7 @@
   "type": "commonjs",
   "description": "",
   "dependencies": {
-    "@thatopen/fragments": "^3.3.1",
+    "@thatopen/fragments": "^3.3.7",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.3",
     "@types/multer": "^2.0.0",
