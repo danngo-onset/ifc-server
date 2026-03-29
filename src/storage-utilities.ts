@@ -1,26 +1,35 @@
 import fs from "fs/promises";
 import path from "path";
+import crypto from "crypto";
 
 // storage directory for fragments
 const STORAGE_DIR = path.join(process.cwd(), "storage");
 const FRAGMENTS_DIR = path.join(STORAGE_DIR, "fragments");
 
 function generateGUID() {
-  let i;
-  let result = "";
-
-  for (let j = 0; j < 32; j++) {
-    if (j === 8 || j === 12 || j === 16 || j === 20) 
-      result += "-";
-
-    i = Math.floor(Math.random() * 16)
-            .toString(16)
-            .toLowerCase();
-
-    result += i;
+  // Prefer built-in randomUUID when available
+  if (typeof (crypto as any).randomUUID === "function") {
+    return (crypto as any).randomUUID();
   }
 
-  return result;
+  // Fallback: generate RFC 4122 version 4 UUID from cryptographically secure random bytes
+  const bytes = crypto.randomBytes(16);
+
+  // Per RFC 4122, set the four most significant bits of the 7th byte to 0100 (version 4)
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+
+  // Set the two most significant bits of the 9th byte to 10 (variant 1)
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+  const hex = bytes.toString("hex");
+
+  return [
+    hex.substring(0, 8),
+    hex.substring(8, 12),
+    hex.substring(12, 16),
+    hex.substring(16, 20),
+    hex.substring(20, 32)
+  ].join("-");
 }
 
 async function initStorage() {
