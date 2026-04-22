@@ -5,7 +5,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "nodemon --config nodemon.json --exec \"node --inspect=9229 -r ts-node/register\" src/index.ts"
+    "dev": "nodemon --config nodemon.json --exec \"node --inspect=9229 -r ts-node/register\" src/index.ts",
+    "dev:fresh": "npm i && npm run dev"
   },
   "keywords": [],
   "author": "",
