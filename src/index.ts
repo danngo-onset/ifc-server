@@ -1,12 +1,12 @@
 import path from "path";
 
-import express, { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 
 import cors from "cors";
 
 import multer from "multer";
 
-import * as FRAGS from "@thatopen/fragments";
+import { IfcImporter } from "@thatopen/fragments";
 
 import * as StorageUtilities from "./storage-utilities";
 
@@ -19,8 +19,6 @@ const allowedOrigins = NODE_ENV === "production" ? [
 ] : [
   "http://localhost:3000"
 ];
-
-StorageUtilities.initStorage();
 
 app
   .use(cors({
@@ -40,7 +38,7 @@ const upload = multer({
   }
 });
 
-const ifcImporter = new FRAGS.IfcImporter();
+const ifcImporter = new IfcImporter();
 const wasmPath = path.join(process.cwd(), "node_modules/web-ifc/");
 ifcImporter.wasm = { absolute: true, path: wasmPath.endsWith("/") ? wasmPath : wasmPath + "/" };
 
@@ -74,7 +72,7 @@ app.post("/fragments", upload.single("file"), async (req: Request, res: Response
 
     console.log(`✅ Fragments generated: ${fragmentBytes.byteLength} bytes`);
 
-    const uuid = StorageUtilities.generateGUID();
+    const uuid = crypto.randomUUID();
 
     if (fragmentBytes) {
       await StorageUtilities.saveFragmentToFile(
@@ -96,6 +94,11 @@ app.post("/fragments", upload.single("file"), async (req: Request, res: Response
 	}
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+void (async () => {
+  await StorageUtilities.initStorage();
+
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+})();
+

@@ -5,24 +5,6 @@ import path from "path";
 const STORAGE_DIR = path.join(process.cwd(), "storage");
 const FRAGMENTS_DIR = path.join(STORAGE_DIR, "fragments");
 
-function generateGUID() {
-  let i;
-  let result = "";
-
-  for (let j = 0; j < 32; j++) {
-    if (j === 8 || j === 12 || j === 16 || j === 20) 
-      result += "-";
-
-    i = Math.floor(Math.random() * 16)
-            .toString(16)
-            .toLowerCase();
-
-    result += i;
-  }
-
-  return result;
-}
-
 async function initStorage() {
   try {
     await fs.mkdir(STORAGE_DIR, { recursive: true });
@@ -33,16 +15,12 @@ async function initStorage() {
 }
 
 async function saveFragmentToFile(filename: string, data: Uint8Array) {
-  try {
-    const fragmentPath = path.join(FRAGMENTS_DIR, `${filename}.frag`);
+  const fragmentPath = path.join(FRAGMENTS_DIR, `${filename}.frag`);
 
-    // Save fragment data
-    await fs.writeFile(fragmentPath, data);
-    
-    return fragmentPath;
-  } catch (error) {
-    throw error;
-  }
+  // Save fragment data
+  await fs.writeFile(fragmentPath, data);
+  
+  return fragmentPath;
 }
 
 async function loadFragmentFromFile(filename: string) {
@@ -62,6 +40,5 @@ async function loadFragmentFromFile(filename: string) {
 export {
   initStorage,
   saveFragmentToFile,
-  loadFragmentFromFile,
-  generateGUID
+  loadFragmentFromFile
 };
