@@ -7,7 +7,6 @@ const FRAGMENTS_DIR = path.join(STORAGE_DIR, "fragments");
 
 async function initStorage() {
   try {
-    await fs.mkdir(STORAGE_DIR, { recursive: true });
     await fs.mkdir(FRAGMENTS_DIR, { recursive: true });
   } catch (error) {
     console.error("Error creating storage directories:", error);
@@ -19,18 +18,13 @@ async function saveFragmentToFile(filename: string, data: Uint8Array) {
 
   // Save fragment data
   await fs.writeFile(fragmentPath, data);
-  
-  return fragmentPath;
 }
 
-async function loadFragmentFromFile(filename: string) {
+function loadFragmentFromFile(filename: string) {
   try {
     const fragmentPath = path.join(FRAGMENTS_DIR, `${filename}.frag`);
     
-    const data = await fs.readFile(fragmentPath);
-    
-    const fragments = new Uint8Array(data);
-    return fragments;
+    return fs.readFile(fragmentPath);
   } catch (error) {
     console.error("Error loading fragment:", error);
     throw error;

@@ -25,7 +25,8 @@ app
     origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type"]
+    allowedHeaders: ["Content-Type"],
+    exposedHeaders: ["X-Fragments-Id"]
   }))
   .use(express.json());
 
@@ -51,9 +52,9 @@ app.get("/fragments/:id", async (req: Request, res: Response) => {
   try {
     const fragments = await StorageUtilities.loadFragmentFromFile(req.params.id);
     
-    res.status(200).json({
-      fragments: Buffer.from(fragments).toString("base64")
-    });
+    return res.status(200)
+              .setHeader("Content-Type", "application/octet-stream")
+              .send(fragments);
   } catch (error) {
     console.error("Error getting fragments:", error);
     res.status(500).json({ error: "Error retrieving fragments" });
@@ -66,25 +67,21 @@ app.post("/fragments", upload.single("file"), async (req: Request, res: Response
 	if (!file) return res.status(400).send("No file provided");
 
 	try {
-    const fragmentBytes = await ifcImporter.process({
+    const fragments = await ifcImporter.process({
       bytes: new Uint8Array(file.buffer)
     });
 
-    console.log(`✅ Fragments generated: ${fragmentBytes.byteLength} bytes`);
+    console.log(`✅ Fragments generated: ${fragments.byteLength} bytes`);
 
     const uuid = crypto.randomUUID();
 
-    if (fragmentBytes) {
-      await StorageUtilities.saveFragmentToFile(
-        uuid, 
-        fragmentBytes
-      );
+    if (fragments) {
+      await StorageUtilities.saveFragmentToFile(uuid, fragments);
 
-      return res.status(200).json({ 
-        filename: file.originalname,
-        id: uuid,
-        fragments: Buffer.from(fragmentBytes).toString("base64") // Base64 encoded fragments
-      });
+      return res.status(200)
+                .setHeader("Content-Type", "application/octet-stream")
+                .setHeader("X-Fragments-Id", uuid)
+                .send(Buffer.from(fragments));
     }
 
     return res.status(400).send("No fragments generated from IFC file");
